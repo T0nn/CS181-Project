@@ -1,5 +1,7 @@
 import random
 
+VERBOSE = False
+
 class Card(object):
     def __init__(self, char):
         self.expval = char
@@ -50,6 +52,12 @@ STATUS_PLAYING = 0
 STATUS_STICK = 1
 STATUS_BUST = 2
 
+MOVE_HIT = 0
+MOVE_STICK = 1
+
+RESULT_DEALER_WIN = 0
+RESULT_PLAYER_WIN = 1
+
 class Player(object):
     def __init__(self, identity, _id):
         self.cards = []
@@ -59,14 +67,16 @@ class Player(object):
 
     def hit(self, deck):
         if len(self.cards) >= 2:
-            print("Player {} HIT".format(self.id))
+            if VERBOSE:
+                print("Player {} HIT".format(self.id))
         self.cards.append(deck.pop())
         if len(self.cards) == 1:
             self.cards[0].hidden = False
 
     def stick(self):
         if len(self.cards) >= 2:
-            print("Player {} STICK".format(self.id))
+            if VERBOSE:
+                print("Player {} STICK".format(self.id))
         self.status = STATUS_STICK
 
     def move(self, deck, players):
@@ -86,6 +96,12 @@ class Player(object):
     def show(self):
         print("Player {}: {}".format(self.id, [x.expval for x in self.cards]),
               "SUM", self.sum)
+
+    # For learning..., do not call this for non-learning purpose
+    def _learn_stat(self, is_learner=False):
+        if not is_learner:
+            return tuple([str(x) for x in self.cards])
+        return tuple([str(x.expval) for x in self.cards])
 
 
 class Dealer(Player):
@@ -118,15 +134,10 @@ class InputPlayer(Player):
 
 
 class Game(object):
-    def __init__(self, num_players=1):
+    def __init__(self):
         self.deck = Deck()
-        self.dealer = Dealer(IDENTITY_DEALER, 0)
-        self.players = [InputPlayer(IDENTITY_PLAYER, i) \
-                        for i in range(1, num_players+1)]
-        for _ in range(2):
-            self.dealer.hit(self.deck)
-            for p in self.players:
-                p.hit(self.deck)
+        self.dealer = None
+        self.players = None
 
     @property
     def all_players(self):
@@ -163,6 +174,19 @@ class Game(object):
             player.status = STATUS_BUST
 
     def run(self):
+        pass
+
+class SimpleGame(Game):
+    def __init__(self):
+        self.deck = Deck()
+        self.dealer = Dealer(IDENTITY_DEALER, 0)
+        self.players = [InputPlayer(IDENTITY_PLAYER, 1)]
+        for _ in range(2):
+            self.dealer.hit(self.deck)
+            for p in self.players:
+                p.hit(self.deck)
+
+    def run(self):
         print("GAME START")
         for p in self.all_players:
             print(p)
@@ -195,7 +219,6 @@ class Game(object):
             print("Winner is {}\n".format(final[0].id))
         
         
-
 if __name__ == "__main__":
-    game = Game()
+    game = SimpleGame()
     game.run()
