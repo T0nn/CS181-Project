@@ -144,14 +144,16 @@ class Game(object):
     def all_players(self):
         return [self.dealer] + self.players
 
-
-    # 3 Cases to determine the current game status
     @property
-    def is_all_stick(self):
-        for p in self.all_players:
-            if p.status != STATUS_STICK:
-                return False
-        return True
+    def is_players_playing(self):
+        for p in self.players:
+            if p.status == STATUS_PLAYING:
+                return True
+        return False
+
+    @property
+    def is_dealer_playing(self):
+        return True if self.dealer.status == STATUS_PLAYING else False
 
     @property
     def is_dealer_bust(self):
@@ -168,7 +170,8 @@ class Game(object):
 
     @property
     def is_end(self):
-        return self.is_all_stick or self.is_dealer_bust or self.is_players_bust
+        return (not self.is_players_playing and not self.is_dealer_playing) or \
+                self.is_dealer_bust or self.is_players_bust
 
     def check(self, player):
         if player.status != STATUS_BUST and player.sum > 21:
@@ -178,17 +181,15 @@ class Game(object):
         while not self.is_end:
             # Players first run
             for p in self.players:
-                if p.status == STATUS_PLAYING:
+                while p.status == STATUS_PLAYING:
                     p.move(self.deck, self.all_players)
                     self.check(p)
             if self.is_players_bust:
                 break
             # Then dealer run
-            if self.dealer.status == STATUS_PLAYING:
+            while self.dealer.status == STATUS_PLAYING:
                 self.dealer.move(self.deck, self.all_players)
                 self.check(self.dealer)
-                if self.is_dealer_bust:
-                    break
 
         if self.is_dealer_bust:
             return RESULT_PLAYER_WIN
@@ -218,17 +219,15 @@ class SimpleGame(Game):
         while not self.is_end:
             # Players first run
             for p in self.players:
-                if p.status == STATUS_PLAYING:
+                while p.status == STATUS_PLAYING:
                     p.move(self.deck, self.all_players)
                     self.check(p)
             if self.is_players_bust:
                 break
             # Then dealer run
-            if self.dealer.status == STATUS_PLAYING:
+            while self.dealer.status == STATUS_PLAYING:
                 self.dealer.move(self.deck, self.all_players)
                 self.check(self.dealer)
-                if self.is_dealer_bust:
-                    break
 
         print("\nGame Ends")
         print("\n- SCOREBOARD -")

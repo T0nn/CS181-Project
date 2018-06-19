@@ -1,9 +1,11 @@
 from game import *
 import random
 
-discount = 1
+discount = 0.85
 reward = 1
 penalty = -1
+
+epsilon = 0.5
 
 class QTable(object):
     def __init__(self):
@@ -12,8 +14,7 @@ class QTable(object):
     def _process_status(self, status):
         player_status = tuple(sorted(status[0]))
         dealer_status = tuple(sorted(status[1]))
-        dealer_stick = status[2]
-        status = tuple([player_status, dealer_status, dealer_stick])
+        status = tuple([player_status, dealer_status])
         if self.table.get(status) == None:
             self.table[status] = dict()
             self.table[status][MOVE_HIT] = 0
@@ -52,9 +53,14 @@ class LearningPlayer(Player):
         dealer = [p for p in players if p.identity == IDENTITY_DEALER][0]
         player_status = self._learn_stat(True)
         dealer_status = dealer._learn_stat()
-        dealer_stick = True if dealer.status == STATUS_STICK else False
-        game_status = tuple([player_status, dealer_status, dealer_stick])
-        decision = random.choice([MOVE_HIT, MOVE_STICK])
+        game_status = tuple([player_status, dealer_status])
+        rnd = random.random()
+        if rnd > epsilon:
+            decision = random.choice([MOVE_HIT, MOVE_STICK])
+        else:
+            hit_reward = table.lookup(game_status, MOVE_HIT)
+            stick_reward = table.lookup(game_status, MOVE_STICK)
+            decision = MOVE_HIT if hit_reward > stick_reward else MOVE_STICK
         if decision == MOVE_HIT:
             self.hit(deck)
             self.status_move.append([game_status, MOVE_HIT])
@@ -68,7 +74,6 @@ class LearningGame(Game):
         self.deck = Deck()
         self.dealer = Dealer(IDENTITY_DEALER, 0)
         self.players = [LearningPlayer(IDENTITY_PLAYER, 1)]
-        self.learning_agent = self.players[0]
         for _ in range(2):
             self.dealer.hit(self.deck)
             for p in self.players:
@@ -76,18 +81,17 @@ class LearningGame(Game):
 
     def run(self):
         while not self.is_end:
-            # Dealer first turn
-            if self.dealer.status == STATUS_PLAYING:
-                self.dealer.move(self.deck, self.all_players)
-                self.check(self.dealer)
-                if self.is_dealer_bust:
-                    break
-            # Then come to the players
-            # Now is learning agent to move
+            # Players first run
             for p in self.players:
-                if p.status == STATUS_PLAYING:
+                while p.status == STATUS_PLAYING:
                     p.move(self.deck, self.all_players)
                     self.check(p)
+            if self.is_players_bust:
+                break
+            # Then dealer run
+            while self.dealer.status == STATUS_PLAYING:
+                self.dealer.move(self.deck, self.all_players)
+                self.check(self.dealer)
 
         if self.is_dealer_bust:
             p = self.players[0]
