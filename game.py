@@ -57,6 +57,7 @@ MOVE_STICK = 1
 
 RESULT_DEALER_WIN = 0
 RESULT_PLAYER_WIN = 1
+RESULT_DRAW = 2
 
 class Player(object):
     def __init__(self, identity, _id):
@@ -175,18 +176,19 @@ class Game(object):
 
     def run(self):
         while not self.is_end:
-            # Dealer first turn
+            # Players first run
+            for p in self.players:
+                if p.status == STATUS_PLAYING:
+                    p.move(self.deck, self.all_players)
+                    self.check(p)
+            if self.is_players_bust:
+                break
+            # Then dealer run
             if self.dealer.status == STATUS_PLAYING:
                 self.dealer.move(self.deck, self.all_players)
                 self.check(self.dealer)
                 if self.is_dealer_bust:
                     break
-            # Then come to the players
-            # Now is learning agent to move
-            for p in self.players:
-                if p.status == STATUS_PLAYING:
-                    p.move(self.deck, self.all_players)
-                    self.check(p)
 
         if self.is_dealer_bust:
             return RESULT_PLAYER_WIN
@@ -195,6 +197,8 @@ class Game(object):
         else:
             final = sorted(self.all_players, key=lambda x: x.sum, reverse=True)
             final = [f for f in final if f.status != STATUS_BUST]
+            if final[0].sum == final[1].sum:
+                return RESULT_DRAW
             if final[0].identity == IDENTITY_DEALER:
                 return RESULT_DEALER_WIN
             return RESULT_PLAYER_WIN
@@ -211,20 +215,20 @@ class SimpleGame(Game):
 
     def run(self):
         print("GAME START")
-        for p in self.all_players:
-            print(p)
         while not self.is_end:
-            # Dealer first turn
+            # Players first run
+            for p in self.players:
+                if p.status == STATUS_PLAYING:
+                    p.move(self.deck, self.all_players)
+                    self.check(p)
+            if self.is_players_bust:
+                break
+            # Then dealer run
             if self.dealer.status == STATUS_PLAYING:
                 self.dealer.move(self.deck, self.all_players)
                 self.check(self.dealer)
                 if self.is_dealer_bust:
                     break
-            # Then come to the players
-            for p in self.players:
-                if p.status == STATUS_PLAYING:
-                    p.move(self.deck, self.all_players)
-                    self.check(p)
 
         print("\nGame Ends")
         print("\n- SCOREBOARD -")
@@ -239,7 +243,10 @@ class SimpleGame(Game):
         else:
             final = sorted(self.all_players, key=lambda x: x.sum, reverse=True)
             final = [f for f in final if f.status != STATUS_BUST]
-            print("Winner is {}\n".format(final[0].id))
+            if final[0].sum == final[1].sum:
+                print("Draw")
+            else:
+                print("Winner is {}\n".format(final[0].id))
         
         
 if __name__ == "__main__":

@@ -1,6 +1,10 @@
 from game import *
 import random
 
+discount = 1
+reward = 1
+penalty = -1
+
 class QTable(object):
     def __init__(self):
         self.table = dict()
@@ -8,7 +12,8 @@ class QTable(object):
     def _process_status(self, status):
         player_status = tuple(sorted(status[0]))
         dealer_status = tuple(sorted(status[1]))
-        status = tuple([player_status, dealer_status])
+        dealer_stick = status[2]
+        status = tuple([player_status, dealer_status, dealer_stick])
         if self.table.get(status) == None:
             self.table[status] = dict()
             self.table[status][MOVE_HIT] = 0
@@ -29,7 +34,7 @@ class QTable(object):
 
     def show(self):
         for status in self.table:
-            if self.table[status][MOVE_HIT] > 2 or self.table[status][MOVE_HIT] > 2:
+            if self.table[status][MOVE_HIT] > 2 or self.table[status][MOVE_HIT] < -2:
                 print('STATUS', status)
                 print('HIT   has reward', self.table[status][MOVE_HIT])
                 print('STICK has reward', self.table[status][MOVE_STICK])
@@ -44,10 +49,11 @@ class LearningPlayer(Player):
         self.status_move = []
 
     def move(self, deck, players=[]):
+        dealer = [p for p in players if p.identity == IDENTITY_DEALER][0]
         player_status = self._learn_stat(True)
-        dealer_status = [p for p in players if p.identity == \
-                            IDENTITY_DEALER][0]._learn_stat()
-        game_status = tuple([player_status, dealer_status])
+        dealer_status = dealer._learn_stat()
+        dealer_stick = True if dealer.status == STATUS_STICK else False
+        game_status = tuple([player_status, dealer_status, dealer_stick])
         decision = random.choice([MOVE_HIT, MOVE_STICK])
         if decision == MOVE_HIT:
             self.hit(deck)
@@ -85,32 +91,42 @@ class LearningGame(Game):
 
         if self.is_dealer_bust:
             p = self.players[0]
+            c = len(p.status_move)
             for i in p.status_move:
+                c -= 1
                 status = i[0]
                 move = i[1]
                 val = table.lookup(status, move)
-                table.update(status, move, val+1)
+                table.update(status, move, val+reward*(discount**c))
         elif self.is_players_bust:
             p = self.players[0]
+            c = len(p.status_move)
             for i in p.status_move:
+                c -= 1
                 status = i[0]
                 move = i[1]
                 val = table.lookup(status, move)
-                table.update(status, move, val-1)
+                table.update(status, move, val+penalty*(discount**c))
         else:
             final = sorted(self.all_players, key=lambda x: x.sum, reverse=True)
             final = [f for f in final if f.status != STATUS_BUST]
+            if final[0].sum == final[1].sum:
+                return
             if final[0].identity == IDENTITY_DEALER:
                 p = self.players[0]
+                c = len(p.status_move)
                 for i in p.status_move:
+                    c -= 1
                     status = i[0]
                     move = i[1]
                     val = table.lookup(status, move)
-                    table.update(status, move, val-1)
+                    table.update(status, move, val+penalty*(discount**c))
             else:
                 p = self.players[0]
+                c = len(p.status_move)
                 for i in p.status_move:
+                    c -= 1
                     status = i[0]
                     move = i[1]
                     val = table.lookup(status, move)
-                    table.update(status, move, val+1)
+                    table.update(status, move, val+reward*(discount**c))

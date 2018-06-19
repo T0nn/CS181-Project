@@ -16,13 +16,21 @@ class RandomPlayer(Player):
 
 class QPolicyPlayer(Player):
     def move(self, deck, players=[]):
+        dealer = [p for p in players if p.identity == IDENTITY_DEALER][0]
         player_status = self._learn_stat(True)
-        dealer_status = [p for p in players if p.identity == \
-                            IDENTITY_DEALER][0]._learn_stat()
-        game_status = tuple([player_status, dealer_status])
+        dealer_status = dealer._learn_stat()
+        dealer_stick = True if dealer.status == STATUS_STICK else False
+        game_status = tuple([player_status, dealer_status, dealer_stick])
         hit_reward = table.lookup(game_status, MOVE_HIT)
         stick_reward = table.lookup(game_status, MOVE_STICK)
-        decision = MOVE_HIT if hit_reward > stick_reward else MOVE_STICK
+        decision = None
+        if hit_reward == 0 and stick_reward == 0:
+            if self.sum < 16:
+                decision = MOVE_HIT
+            else:
+                decition = MOVE_STICK
+        else:
+            decision = MOVE_HIT if hit_reward > stick_reward else MOVE_STICK
         if decision == MOVE_HIT:
             self.hit(deck)
         else:
@@ -61,7 +69,8 @@ class DVDGame(Game):
 
 
 if __name__ == "__main__":
-    n = 5000
+    # random.seed(0)
+    n = 10000
     c = 0
     for i in range(n):
         game = TestGame()
