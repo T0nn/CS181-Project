@@ -2,7 +2,7 @@ import learn
 import pickle
 
 if __name__ == "__main__":
-    for i in range(10000000):
+    for i in range(10000):
         print(i)
         game = learn.LearningGame()
         game.run()
