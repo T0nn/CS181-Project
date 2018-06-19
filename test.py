@@ -19,13 +19,12 @@ class QPolicyPlayer(Player):
         dealer = [p for p in players if p.identity == IDENTITY_DEALER][0]
         player_status = self._learn_stat(True)
         dealer_status = dealer._learn_stat()
-        dealer_stick = True if dealer.status == STATUS_STICK else False
-        game_status = tuple([player_status, dealer_status, dealer_stick])
+        game_status = tuple([player_status, dealer_status])
         hit_reward = table.lookup(game_status, MOVE_HIT)
         stick_reward = table.lookup(game_status, MOVE_STICK)
         decision = None
         if hit_reward == 0 and stick_reward == 0:
-            if self.sum < 16:
+            if self.sum < 17:
                 decision = MOVE_HIT
             else:
                 decition = MOVE_STICK
